@@ -1,0 +1,6 @@
+{
+  "name": "FitQuest",
+  "description": "A gamified full-stack fitness workout planner, tracker, and visual analytics dashboard styled with a soft blue-lavender theme, interactive planner calendar, drag-and-drop mechanics, and custom streak and badge awards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

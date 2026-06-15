@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  /* === APP SHELL === */
+  --bg-app: #ECEAF5;              /* Soft lavender page background */
+  --bg-sidebar: #6C47FF;          /* Deep violet sidebar */
+  --bg-sidebar-active: rgba(255, 255, 255, 0.18); /* Active pill on sidebar */
+  --bg-sidebar-hover: rgba(255, 255, 255, 0.10);  /* Hover on sidebar */
+
+  /* === CARDS === */
+  --bg-card: #FFFFFF;             /* Standard white card */
+  --bg-card-purple: #6C47FF;      /* Deep purple hero card */
+  --bg-card-purple-dark: #5035CC; /* Darker purple for chart background inside hero */
+  --bg-card-pink: #FF6B9D;        /* Hot pink accent card */
+  --bg-card-pink-dark: #E8527F;   /* Darker pink for depth */
+  --bg-input: #F4F2FF;            /* Light purple input background */
+
+  /* === BRAND PURPLE SCALE === */
+  --purple-600: #6C47FF;          /* Primary brand — buttons, active states */
+  --purple-500: #8B6BFF;          /* Hover states, lighter accents */
+  --purple-400: #A994FF;          /* Muted accents, badge borders */
+  --purple-200: #D4CBFF;          /* Very light purple tints */
+  --purple-100: #EDE9FF;          /* Chip/tag backgrounds */
+  --purple-50:  #F5F3FF;          /* Faintest tint */
+
+  /* === ACCENT PINK === */
+  --pink-500: #FF6B9D;            /* Primary pink accent — streaks, today card */
+  --pink-400: #FF8FB5;            /* Lighter pink */
+  --pink-100: #FFE4EF;            /* Pink tint for backgrounds */
+
+  /* === SEMANTIC === */
+  --success: #22C55E;
+  --success-light: #DCFCE7;
+  --warning: #F59E0B;
+  --warning-light: #FEF3C7;
+  --danger: #EF4444;
+  --danger-light: #FEE2E2;
+
+  /* === TEXT === */
+  --text-on-purple: #FFFFFF;           /* Text on purple cards */
+  --text-on-pink: #FFFFFF;             /* Text on pink cards */
+  --text-primary: #1A1340;             /* Near-black indigo — headings */
+  --text-secondary: #6B6B8A;           /* Muted gray-purple — labels */
+  --text-muted: #A0A0B8;               /* Lightest text — placeholders */
+  --text-purple: #6C47FF;              /* Purple-colored text for links/values */
+
+  /* === BORDERS & SHADOWS === */
+  --border: #E4E2F0;
+  --shadow-card: 0 4px 20px rgba(108, 71, 255, 0.08), 0 1px 4px rgba(108, 71, 255, 0.04);
+  --shadow-hover: 0 12px 40px rgba(108, 71, 255, 0.18);
+  --shadow-purple-card: 0 8px 32px rgba(108, 71, 255, 0.30);
+  --shadow-pink-card: 0 8px 32px rgba(255, 107, 157, 0.30);
+
+  /* === SHAPE === */
+  --radius-card: 22px;
+  --radius-card-sm: 16px;
+  --radius-btn: 12px;
+  --radius-input: 10px;
+  --radius-pill: 999px;
+  --radius-icon: 14px;
+}
+
+[data-theme="dark"] {
+  --bg-app: #0E0C1A;
+  --bg-card: #1A1630;
+  --bg-sidebar: #120E28;
+  --bg-sidebar-active: rgba(255, 255, 255, 0.15);
+  --bg-input: #24203A;
+  --text-primary: #F0EEFF;
+  --text-secondary: #9B97C4;
+  --text-muted: #6B6890;
+  --border: #2A2545;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --purple-100: #2A2050;
+  --purple-50: #1E1A40;
+}
+
+/* Base resets & styled transitions */
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: "DM Sans", -apple-system, ssystem-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--purple-200);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--purple-400);
+}
+
+/* Custom scroll-hint class for touch and responsive swipe indicators */
+.scroll-hint {
+  scrollbar-width: thin;
+  scrollbar-color: #A994FF transparent;
+}
+.scroll-hint::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+}
+.scroll-hint::-webkit-scrollbar-thumb {
+  background: #A994FF !important;
+  border-radius: 999px;
+}
+.scroll-hint::-webkit-scrollbar-thumb:hover {
+  background: #6C47FF !important;
+}
+
+/* Keyframe animations */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #EDE9FF 25%, #D4CBFF 50%, #EDE9FF 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.8s infinite linear;
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #2A2050 25%, #3D3070 50%, #2A2050 75%);
+  background-size: 800px 100%;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-50px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  animation: confettiFall 2.5s ease-out forwards;
+}
+
+/* Custom interactive triggers */
+.card-hover {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-3.5px);
+  box-shadow: var(--shadow-hover);
+}
+
+.btn-active:active {
+  transform: scale(0.96);
+  transition: transform 80ms ease;
+}
+
+/* Custom line chart styles */
+.pulse-glow {
+  animation: pulse 2s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { filter: drop-shadow(0 0 2px rgba(255, 107, 157, 0.4)); }
+  100% { filter: drop-shadow(0 0 6px rgba(255, 107, 157, 1)); }
+}
+
+/* SVG Line Draw In */
+.chart-draw-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawIn 1.5s ease-in-out forwards;
+}
+
+@keyframes drawIn {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Custom Switch styling */
+.switch-checkbox:checked + .switch-label {
+  background-color: var(--purple-600);
+}
+.switch-checkbox:checked + .switch-label .switch-dot {
+  transform: translateX(1.25rem);
+}
