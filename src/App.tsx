@@ -15,7 +15,7 @@ import WorkoutModal from './components/WorkoutModal';
 import ToastContainer from './components/ToastContainer';
 import LevelUpCelebration from './components/LevelUpCelebration';
 
-import { FitUser, WeeklyPlan, Workout, WeightLog, XPActivity, ToastMessage, GoalType } from './types';
+import { FitUser, WeeklyPlan, Workout, WeightLog, XPActivity, ToastMessage, GoalType, DayPlan, UnitType } from './types';
 import { FOCUS_TAGS, DEMO_WORKOUTS, generateSeedData, getOffsetDateString, getLevelInfo } from './data';
 
 export default function App() {
@@ -75,7 +75,16 @@ export default function App() {
       // Load Planner weekly layout
       const planCached = localStorage.getItem('fq_weeks');
       if (planCached) {
-        setActivePlan(JSON.parse(planCached));
+        const parsed = JSON.parse(planCached);
+        // Handle both array and single object formats
+        // Arrays are the new format (multiple weeks), objects are legacy format (single week)
+        if (Array.isArray(parsed)) {
+          // Get the first week (current week) from the array
+          setActivePlan(parsed[0] || null);
+        } else {
+          // Legacy format: single plan object
+          setActivePlan(parsed);
+        }
       }
 
       // Load weight history logs
@@ -103,11 +112,11 @@ export default function App() {
   // System toast trigger handler
   const addToast = (title: string, message: string, type: ToastMessage['type'], duration?: number) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-    setToasts((prev) => [...prev, { id, title, message, type, duration }]);
+    setToasts((prev: ToastMessage[]) => [...prev, { id, title, message, type, duration }]);
   };
 
   const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev: ToastMessage[]) => prev.filter((t: ToastMessage) => t.id !== id));
   };
 
   // ================= ONBOARD SUCCESS DISPATCHER =================
@@ -136,7 +145,7 @@ export default function App() {
     setUnlockedBadgeIds([]);
 
     localStorage.setItem('fq_user', JSON.stringify(fullUser));
-    localStorage.setItem('fq_weeks', JSON.stringify(plan));
+    localStorage.setItem('fq_weeks', JSON.stringify([plan]));
     localStorage.setItem('fq_weight_log', JSON.stringify(seed.weightLogs));
     localStorage.setItem('fq_activities_xp', JSON.stringify(seed.xpLogs));
     localStorage.setItem('fq_badges', JSON.stringify([]));
@@ -152,6 +161,31 @@ export default function App() {
 
   // Generator math for planner splits
   const generateInitialPlannerSplit = (goal: GoalType, numDays: number, muscles: string[]): WeeklyPlan => {
+    // Helper: Calculate ISO week number for generating correct week IDs
+    const getISOWeekNumber = (date: Date) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    };
+
+    // Helper: Get Monday of current week
+    const getWeekStartDate = () => {
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+      const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + daysToMonday);
+      monday.setHours(0, 0, 0, 0);
+      return monday;
+    };
+
+    // Generate correct week ID based on current date
+    const monday = getWeekStartDate();
+    const year = monday.getFullYear();
+    const weekNum = getISOWeekNumber(monday);
+    const weekId = `week_${year}_W${String(weekNum).padStart(2,'0')}`;
+
     // Determine schedule split mappings:
     const daysArrObj = Array.from({ length: 7 }).map((_, idx) => {
       // Mon=0, Sun=6
@@ -202,8 +236,8 @@ export default function App() {
     });
 
     return {
-      id: `week_${new Date().getFullYear()}_W03`,
-      week_start: getOffsetDateString(-((new Date().getDay() + 6) % 7)), // monday of current week
+      id: weekId,
+      week_start: monday.toISOString().split('T')[0],
       days: daysArrObj,
       weekly_boss_defeated: false,
     };
@@ -320,11 +354,11 @@ export default function App() {
 
     let curCompletedState = false;
 
-    const updatedDays = activePlan.days.map((day) => {
+    const updatedDays = activePlan.days.map((day: DayPlan) => {
       if (day.day_index === activeDayIdxForOpenedModal) {
         return {
           ...day,
-          workouts: day.workouts.map((w) => {
+          workouts: day.workouts.map((w: Workout) => {
             if (w.id === workoutId) {
               curCompletedState = w.is_completed;
               return {
@@ -343,7 +377,7 @@ export default function App() {
 
     const refreshedWeeklyPlan = { ...activePlan, days: updatedDays };
     setActivePlan(refreshedWeeklyPlan);
-    localStorage.setItem('fq_weeks', JSON.stringify(refreshedWeeklyPlan));
+    saveWeeklyPlanToStorage(refreshedWeeklyPlan);
 
     // Close Modal View
     setSelectedWorkoutForModal(null);
@@ -383,7 +417,7 @@ export default function App() {
   // ================= PLANNER ADD/REMOVE UTILITY DRIVER =================
   const handleAddWorkoutToPlanner = (dayIndex: number, newWorkout: Workout) => {
     if (!activePlan) return;
-    const updatedDays = activePlan.days.map((day) => {
+    const updatedDays = activePlan.days.map((day: DayPlan) => {
       if (day.day_index === dayIndex) {
         return {
           ...day,
@@ -396,7 +430,7 @@ export default function App() {
 
     const updated = { ...activePlan, days: updatedDays };
     setActivePlan(updated);
-    localStorage.setItem('fq_weeks', JSON.stringify(updated));
+    saveWeeklyPlanToStorage(updated);
 
     // Award minor experience points for active planner scheduling!
     awardXP(5, `📅 Scheduled exercise in planner schedule for ${daysLabelShort[dayIndex]}`);
@@ -406,11 +440,11 @@ export default function App() {
 
   const handleRemoveWorkoutFromPlanner = (dayIndex: number, workoutId: string) => {
     if (!activePlan) return;
-    const updatedDays = activePlan.days.map((day) => {
+    const updatedDays = activePlan.days.map((day: DayPlan) => {
       if (day.day_index === dayIndex) {
         return {
           ...day,
-          workouts: day.workouts.filter((w) => w.id !== workoutId),
+          workouts: day.workouts.filter((w: Workout) => w.id !== workoutId),
         };
       }
       return day;
@@ -418,7 +452,7 @@ export default function App() {
 
     const updated = { ...activePlan, days: updatedDays };
     setActivePlan(updated);
-    localStorage.setItem('fq_weeks', JSON.stringify(updated));
+    saveWeeklyPlanToStorage(updated);
     addToast('Workout Removed', 'Removed quest listing from daily calendar.', 'warning');
   };
 
@@ -426,11 +460,11 @@ export default function App() {
     if (!activePlan) return;
     let completedMarked = false;
 
-    const updatedDays = activePlan.days.map((day) => {
+    const updatedDays = activePlan.days.map((day: DayPlan) => {
       if (day.day_index === dayIndex) {
         return {
           ...day,
-          workouts: day.workouts.map((w) => {
+          workouts: day.workouts.map((w: Workout) => {
             if (w.id === workoutId) {
               completedMarked = !w.is_completed;
               return {
@@ -448,7 +482,7 @@ export default function App() {
 
     const updated = { ...activePlan, days: updatedDays };
     setActivePlan(updated);
-    localStorage.setItem('fq_weeks', JSON.stringify(updated));
+    saveWeeklyPlanToStorage(updated);
 
     if (completedMarked) {
       awardXP(50, `✓ Verified Daily quota challenge`);
@@ -457,11 +491,33 @@ export default function App() {
     }
   };
 
+  // Helper function to save a weekly plan while maintaining array format in localStorage
+  // This ensures consistency between App.tsx and PlannerView.tsx
+  const saveWeeklyPlanToStorage = (plan: WeeklyPlan) => {
+    const cached = localStorage.getItem('fq_weeks');
+    let allWeeks: WeeklyPlan[] = [];
+    
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      allWeeks = Array.isArray(parsed) ? parsed : [parsed];
+    }
+    
+    // Find and update or add the week
+    const existingIdx = allWeeks.findIndex(w => w.id === plan.id);
+    if (existingIdx >= 0) {
+      allWeeks[existingIdx] = plan;
+    } else {
+      allWeeks.push(plan);
+    }
+    
+    localStorage.setItem('fq_weeks', JSON.stringify(allWeeks));
+  };
+
   // Auto suggest splits re-dispatcher
   const handleSuggestSplitTrigger = () => {
     const freshPlan = generateInitialPlannerSplit(user.goal, user.workout_days_per_week, ['upper_body', 'core', 'cardio']);
     setActivePlan(freshPlan);
-    localStorage.setItem('fq_weeks', JSON.stringify(freshPlan));
+    saveWeeklyPlanToStorage(freshPlan);
     addToast('Dynamic plan populated', 'Full weekly quota structured around target muscles!', 'success');
   };
 
@@ -547,8 +603,8 @@ export default function App() {
   };
 
   const toggleThemeGlobal = () => {
-    const nextTheme = user.theme === 'dark' ? 'light' : 'dark';
-    const nextU = { ...user, theme: nextTheme };
+    const nextTheme: 'light' | 'dark' = user.theme === 'dark' ? 'light' : 'dark';
+    const nextU: FitUser = { ...user, theme: nextTheme };
     setUser(nextU);
     localStorage.setItem('fq_user', JSON.stringify(nextU));
     document.documentElement.setAttribute('data-theme', nextTheme);

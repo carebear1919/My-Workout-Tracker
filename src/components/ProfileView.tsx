@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, ShieldAlert, Award, FileSpreadsheet, Eye, EyeOff, Check, AlertCircle, RefreshCcw, Download, Clock } from 'lucide-react';
+import { User, ShieldAlert, Award, FileSpreadsheet, Check, AlertCircle, RefreshCcw, Download, Clock } from 'lucide-react';
 import { FitUser, GoalType, UnitType } from '../types';
 
 interface ProfileViewProps {
@@ -35,62 +35,6 @@ export default function ProfileView({ user, onUpdateUser, onExportData, onResetD
   const [workoutReminderTime, setWorkoutReminderTime] = useState('08:00');
   const [weightReminderEnabled, setWeightReminderEnabled] = useState(true);
   const [weightReminderTime, setWeightReminderTime] = useState('07:00');
-
-  // API Key visual input
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiTesting, setApiTesting] = useState(false);
-  const [apiTestResult, setApiTestResult] = useState<'none' | 'success' | 'fail'>('none');
-  const [ytKeyStatus, setYtKeyStatus] = useState<string>('empty');
-
-  useEffect(() => {
-    const key = localStorage.getItem('fq_yt_api_key') || '';
-    setApiKey(key);
-    setYtKeyStatus(key ? 'saved' : 'empty');
-  }, []);
-
-  const saveYouTubeAPIKey = () => {
-    if (!apiKey.trim()) {
-      onToast('Validation error', 'Please enter an API key first.', 'warning');
-      return;
-    }
-    localStorage.setItem('fq_yt_api_key', apiKey.trim());
-    setYtKeyStatus('saved');
-    onToast('YouTube API key saved successfully!', '✓ Live search enabled', 'success');
-  };
-
-  const clearYouTubeAPIKey = () => {
-    localStorage.removeItem('fq_yt_api_key');
-    setApiKey('');
-    setYtKeyStatus('empty');
-    onToast('API key removed.', 'Using fallback demo videos', 'warning');
-  };
-
-  const testYouTubeAPIKey = async () => {
-    const key = apiKey.trim();
-    if (!key) {
-      onToast('No API key entered.', 'Please enter an API key.', 'warning');
-      return;
-    }
-
-    setApiTesting(true);
-    try {
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=test&maxResults=1&key=${key}`
-      );
-      if (res.ok) {
-        setYtKeyStatus('valid');
-        onToast('YouTube API key is working!', '✓ Connection established', 'success');
-      } else {
-        setYtKeyStatus('invalid');
-        onToast('API key is invalid or quota exceeded.', '✗ Connection failed', 'error');
-      }
-    } catch (e) {
-      onToast('Connection test failed. Check your internet.', 'Connection failed', 'error');
-    } finally {
-      setApiTesting(false);
-    }
-  };
 
   // Reset confirmation input
   const [resetInput, setResetInput] = useState('');
@@ -503,95 +447,7 @@ export default function ProfileView({ user, onUpdateUser, onExportData, onResetD
           )}
         </div>
 
-        {/* Accordion 5: YouTube API Key */}
-        <div className="bg-white dark:bg-[#1A1630] border border-[#E4E2F0]/60 dark:border-[#2A2545]/60 rounded-[20px] overflow-hidden shadow-xs">
-          <button
-            onClick={() => setActiveAccordion(activeAccordion === 'api' ? null : 'api')}
-            className="w-full text-left p-4 font-extrabold text-[#1A1340] dark:text-[#F0EEFF] text-sm tracking-tight hover:bg-gray-50/50 dark:hover:bg-slate-800/10 flex items-center justify-between cursor-pointer"
-            id="accordion-api-btn"
-          >
-            <span className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-[#6C47FF]" /> 5. YouTube API Credential settings
-            </span>
-            <span>{activeAccordion === 'api' ? '▲' : '▼'}</span>
-          </button>
-
-          {activeAccordion === 'api' && (
-            <div className="p-5 border-t border-gray-100 dark:border-[#2A2545]/30 flex flex-col gap-4 animate-slide-in" id="yt-api-section">
-              <p className="text-xs mb-2 text-[#6B6B8A] dark:text-[#9B97C4]">
-                A YouTube Data API v3 key enables live workout search inside the app. 
-                Without it, only fallback demo videos are available.
-                <a href="https://console.cloud.google.com" target="_blank" rel="noreferrer"
-                   className="text-[#6C47FF] dark:text-[#FF8FB5] font-semibold ml-1.5 hover:underline">
-                  Get your free key →
-                </a>
-              </p>
-
-              <div className="flex gap-2.5 items-center">
-                <input 
-                  type={showApiKey ? 'text' : 'password'} 
-                  id="yt-api-key-input" 
-                  placeholder="Paste Google Cloud API key (starts with AIza)" 
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="flex-1 bg-[#F4F2FF] dark:bg-[#24203A] border border-[#E4E2F0] dark:border-[#2A2545] text-xs text-[#1A1340] dark:text-[#F0EEFF] p-3 rounded-xl focus:outline-hidden focus:border-[#6C47FF]"
-                />
-                <button 
-                  onClick={() => setShowApiKey(!showApiKey)} 
-                  id="yt-eye-btn"
-                  type="button"
-                  className="p-3 bg-[#F4F2FF] dark:bg-[#24203A] border border-[#E4E2F0] dark:border-[#2A2545] rounded-xl cursor-pointer text-xs"
-                >
-                  {showApiKey ? '🙈' : '👁️'}
-                </button>
-              </div>
-
-              <div id="yt-key-status" className="text-xs min-h-[18px] font-bold">
-                {ytKeyStatus === 'saved' && (
-                  <span className="text-purple-600 dark:text-[#FF8FB5]">✓ Key saved — live search enabled</span>
-                )}
-                {ytKeyStatus === 'valid' && (
-                  <span className="text-green-500">✓ Connected — YouTube API is working</span>
-                )}
-                {ytKeyStatus === 'invalid' && (
-                  <span className="text-red-500">✗ Invalid key — check and try again</span>
-                )}
-                {ytKeyStatus === 'empty' && (
-                  <span className="text-[#6B6B8A] dark:text-[#9B97C4]">No key saved — using demo videos</span>
-                )}
-              </div>
-
-              <div className="flex gap-2.5">
-                <button 
-                  onClick={saveYouTubeAPIKey} 
-                  type="button"
-                  className="flex-1 p-2.5 bg-[#6C47FF] hover:bg-[#5035CC] text-white rounded-xl transition-all text-xs font-bold cursor-pointer"
-                >
-                  💾 Save Key
-                </button>
-                <button 
-                  onClick={testYouTubeAPIKey} 
-                  id="yt-test-btn"
-                  type="button"
-                  disabled={apiTesting}
-                  className="flex-1 p-2.5 bg-transparent text-[#6C47FF] dark:text-[#FF8FB5] border border-[#6C47FF] dark:border-[#FF8FB5] hover:bg-[#F4F2FF] dark:hover:bg-[#24203A] rounded-xl transition-all text-xs font-bold cursor-pointer disabled:opacity-50"
-                >
-                  {apiTesting ? '⏳ Testing...' : '🔌 Test Connection'}
-                </button>
-                <button 
-                  onClick={clearYouTubeAPIKey}
-                  type="button"
-                  className="p-2.5 bg-transparent text-red-500 border border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all text-xs cursor-pointer"
-                  title="Clear Key"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Accordion 6: Data Actions Export/Reset */}
+        {/* Accordion 5: Data Actions Export/Reset */}
         <div className="bg-white dark:bg-[#1A1630] border border-[#E4E2F0]/60 dark:border-[#2A2545]/60 rounded-[20px] overflow-hidden shadow-xs">
           <button
             onClick={() => setActiveAccordion(activeAccordion === 'data' ? null : 'data')}
@@ -599,7 +455,7 @@ export default function ProfileView({ user, onUpdateUser, onExportData, onResetD
             id="accordion-data-btn"
           >
             <span className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-red-500" /> 6. Data Management & Profile Eradication
+              <FileSpreadsheet className="w-5 h-5 text-red-500" /> 5. Data Management & Profile Eradication
             </span>
             <span>{activeAccordion === 'data' ? '▲' : '▼'}</span>
           </button>

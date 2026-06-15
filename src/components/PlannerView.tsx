@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Plus, Trash2, Calendar, Layout, Search, Clock, ArrowRight, CheckCircle2, GripVertical, AlertTriangle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Plus, Trash2, Calendar, Layout, Search, Clock, ArrowRight, CheckCircle2, GripVertical, AlertTriangle, AlertCircle } from 'lucide-react';
 import { FitUser, WeeklyPlan, Workout, DayPlan } from '../types';
 import { FOCUS_TAGS, DEMO_WORKOUTS } from '../data';
+import { getYouTubeApiKey, isYouTubeApiKeyConfigured } from '../config';
 
 interface PlannerViewProps {
   user: FitUser;
@@ -164,6 +165,17 @@ export default function PlannerView({
     setLocalPlan(plan);
   }, [weekOffset]);
 
+  // Sync with parent's activePlan when viewing current week
+  // This ensures Dashboard and Planner stay synchronized
+  useEffect(() => {
+    if (weekOffset === 0 && activePlan && localPlan && activePlan.id === localPlan.id) {
+      // Only update if they're different to avoid unnecessary re-renders
+      if (JSON.stringify(activePlan) !== JSON.stringify(localPlan)) {
+        setLocalPlan(activePlan);
+      }
+    }
+  }, [activePlan, weekOffset, localPlan]);
+
   const updateLocalPlan = (updated: WeeklyPlan) => {
     setLocalPlan(updated);
     
@@ -177,6 +189,8 @@ export default function PlannerView({
     }
     localStorage.setItem('fq_weeks', JSON.stringify(nextWeeks));
 
+    // Always notify parent if this is the current week (weekOffset === 0)
+    // This ensures Dashboard and Planner stay in sync
     if (weekOffset === 0) {
       onUpdatePlan(updated);
     }
@@ -218,7 +232,7 @@ export default function PlannerView({
 
   // Perform live search or fallback to Demo workouts
   const performSearch = async (query: string) => {
-    const apiKey = localStorage.getItem('fq_yt_api_key') || '';
+    const apiKey = getYouTubeApiKey();
     if (!apiKey) {
       const rawDemos = DEMO_WORKOUTS;
       let filtered = rawDemos;
@@ -955,9 +969,9 @@ export default function PlannerView({
             <div className="bg-gradient-to-br from-[#6C47FF] to-[#9B6BFF] text-white rounded-xl p-3.5 shadow-sm text-xs font-medium flex gap-2.5 items-start shrink-0">
               <Sparkles className="w-5 h-5 text-white/90 shrink-0 mt-0.5" />
               <p className="leading-relaxed">
-                {localStorage.getItem('fq_yt_api_key') 
+                {isYouTubeApiKeyConfigured() 
                   ? '✓ YouTube live search mode unlocked! Streaming results on demand.' 
-                  : '🔌 Demo mode active. Save a YouTube API key in Settings to search real live video splits!'}
+                  : '🔌 Demo mode active. Add YouTube API key to .env.local to search real live video splits!'}
               </p>
             </div>
 
