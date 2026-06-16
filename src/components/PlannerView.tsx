@@ -67,6 +67,13 @@ export default function PlannerView({
   const [customTitle, setCustomTitle] = useState('');
   const [customDuration, setCustomDuration] = useState('20 min');
 
+  // YouTube Link pasting state
+  const [youtubeLinkInput, setYoutubeLinkInput] = useState('');
+  const [extractedVideoId, setExtractedVideoId] = useState<string | null>(null);
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkDuration, setLinkDuration] = useState('Watch');
+  const [linkError, setLinkError] = useState('');
+
   // Drag states
   const [draggedWorkoutId, setDraggedWorkoutId] = useState<string | null>(null);
   const [draggedSourceDayIndex, setDraggedSourceDayIndex] = useState<number | null>(null);
@@ -428,6 +435,73 @@ export default function PlannerView({
 
     updateLocalPlan({ ...localPlan, days: updatedDays });
     onToast('Quest Included', `Added "${video.title}" to ${daysLabel[activeDayForAdd]} planner!`, 'success');
+    setPanelOpen(false);
+  };
+
+  // ================= YOUTUBE LINK PASTE FUNCTIONALITY =================
+  // Extract YouTube video ID from various URL formats
+  const extractYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/watch\?.*?v=)([a-zA-Z0-9_-]{11})(?:[&?/]|$)/,
+      /^([a-zA-Z0-9_-]{11})$/, // raw video ID
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const handleParseYouTubeLink = () => {
+    const videoId = extractYouTubeVideoId(youtubeLinkInput);
+    if (!videoId) {
+      setLinkError('Invalid YouTube URL. Please paste a valid YouTube video link.');
+      setExtractedVideoId(null);
+      return;
+    }
+    setLinkError('');
+    setExtractedVideoId(videoId);
+    if (!linkTitle.trim()) {
+      setLinkTitle('YouTube Workout Video');
+    }
+  };
+
+  const handleAddYouTubeLinkWorkout = () => {
+    if (activeDayForAdd === null || !localPlan || !extractedVideoId) return;
+
+    const newWorkout: Workout = {
+      id: `workout-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      youtube_video_id: extractedVideoId,
+      title: linkTitle.trim() || 'YouTube Workout Video',
+      thumbnail_url: `https://img.youtube.com/vi/${extractedVideoId}/mqdefault.jpg`,
+      duration_label: linkDuration || 'Watch',
+      channel_name: 'YouTube Link',
+      focus_tag: (localPlan?.days || []).find(d => d.day_index === activeDayForAdd)?.focus_tag || 'full_body',
+      notes: '',
+      is_completed: false,
+      completed_at: null,
+    };
+
+    const updatedDays = localPlan.days.map((day) => {
+      if (day.day_index === activeDayForAdd) {
+        return {
+          ...day,
+          workouts: [...day.workouts, newWorkout],
+          is_rest_day: false,
+        };
+      }
+      return day;
+    });
+
+    updateLocalPlan({ ...localPlan, days: updatedDays });
+    onToast('YouTube Link Added', `Added "${newWorkout.title}" to ${daysLabel[activeDayForAdd]} planner!`, 'success');
+    
+    // Reset link input state
+    setYoutubeLinkInput('');
+    setExtractedVideoId(null);
+    setLinkTitle('');
+    setLinkDuration('Watch');
+    setLinkError('');
     setPanelOpen(false);
   };
 
@@ -1014,6 +1088,91 @@ export default function PlannerView({
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* ================= YOUTUBE LINK INPUT SECTION ================= */}
+            <div className="border-t border-[#E4E2F0] dark:border-[#2A2545]/60 pt-4 flex flex-col gap-3 shrink-0">
+              <span className="text-[10px] font-bold text-[#6B6B8A] uppercase tracking-widest block flex items-center gap-1.5">
+                <span>🔗</span> Paste YouTube Link
+              </span>
+
+              <div className="flex flex-col gap-2.5">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={youtubeLinkInput}
+                    aria-label="YouTube link"
+                    onChange={(e) => {
+                      setYoutubeLinkInput(e.target.value);
+                      setLinkError('');
+                    }}
+                    className="w-full bg-[#F4F2FF] dark:bg-slate-800 border p-2 text-xs rounded-xl focus:outline-hidden"
+                    id="youtube-link-input"
+                  />
+                  <button
+                    onClick={handleParseYouTubeLink}
+                    className="shrink-0 bg-[#6C47FF] text-white text-[11px] font-black rounded-xl px-3.5 hover:bg-[#5035CC] cursor-pointer"
+                    id="parse-youtube-link"
+                  >
+                    Parse
+                  </button>
+                </div>
+
+                {linkError && (
+                  <p className="text-[11px] text-red-500 font-semibold px-1">{linkError}</p>
+                )}
+
+                {extractedVideoId && (
+                  <div className="bg-[#F5F3FF] dark:bg-[#24203A] rounded-xl p-3 border border-[#6C47FF]/20 flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={`https://img.youtube.com/vi/${extractedVideoId}/mqdefault.jpg`}
+                        alt="Preview"
+                        className="w-[80px] h-[52px] object-cover rounded-lg border border-black/10 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-[#1A1340] dark:text-[#F0EEFF] truncate">
+                          Video ID: {extractedVideoId}
+                        </p>
+                        <p className="text-[10px] text-green-600 dark:text-green-400 font-semibold">
+                          ✓ Valid video link
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Custom title (optional)"
+                        value={linkTitle}
+                        aria-label="Link custom title"
+                        onChange={(e) => setLinkTitle(e.target.value)}
+                        className="flex-1 bg-white dark:bg-[#1A1630] border border-[#E4E2F0] dark:border-[#2A2545] p-2 text-xs rounded-xl focus:outline-hidden"
+                        id="youtube-link-title"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Duration"
+                        value={linkDuration}
+                        aria-label="Link duration"
+                        onChange={(e) => setLinkDuration(e.target.value)}
+                        className="w-[80px] bg-white dark:bg-[#1A1630] border border-[#E4E2F0] dark:border-[#2A2545] p-2 text-xs rounded-xl focus:outline-hidden"
+                        id="youtube-link-duration"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleAddYouTubeLinkWorkout}
+                      className="w-full bg-green-500 hover:bg-green-600 text-white text-[11px] font-black rounded-xl py-2.5 cursor-pointer"
+                      id="add-youtube-link-workout"
+                    >
+                      ✓ Add to {daysLabel[activeDayForAdd!]}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Manual exercise entry form block */}
